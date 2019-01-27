@@ -16,12 +16,12 @@ from d3m.primitive_interfaces.base import CallResult
 from d3m import container, utils
 from d3m.container import DataFrame as d3m_DataFrame, List as d3m_List
 from d3m.metadata import hyperparams, base as metadata_base
-from d3m.primitives.datasets import DatasetToDataFrame
 
-from common_primitives import utils as utils_cp
+from common_primitives import utils as utils_cp, dataset_to_dataframe as DatasetToDataFrame
 
 __author__ = 'Distil'
 __version__ = '1.2.1'
+__contact__ = 'mailto:jeffrey.gleason@newknowledge.io'
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -51,6 +51,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         'keywords': ['Data Type Predictor','Semantic Classification','Text','NLP','Tabular'],
         'source': {
             'name': __author__,
+            'contact': __contact__,
             'uris': [
                 # Unstructured URIs.
                 "https://github.com/NewKnowledge/simon-d3m-wrapper",
@@ -74,7 +75,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         },
         ],
         # The same path the primitive is registered with entry points in setup.py.
-        'python_path': 'd3m.primitives.distil.simon',
+        'python_path': 'd3m.primitives.data_cleaning.annotate_semantic_types.Simon',
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
         'algorithm_types': [
