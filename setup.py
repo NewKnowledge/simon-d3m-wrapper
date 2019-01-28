@@ -13,7 +13,7 @@ setup(name='SimonD3MWrapper',
     ],
     entry_points = {
         'd3m.primitives': [
-            'data_cleaning.annotate_semantic_types.Simon = SimonD3MWrapper:simon'
+            'data_cleaning.column_type_profiler.Simon = SimonD3MWrapper:simon'
         ],
     },
 )
