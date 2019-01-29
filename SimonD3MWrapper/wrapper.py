@@ -69,7 +69,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         },
             {
             "type": "TGZ",
-            "key": "simon_models",
+            "key": "simon_models_1",
             "file_uri": "http://public.datadrivendiscovery.org/simon_models_1.tar.gz",
             "file_digest":"d071106b823ab1168879651811dd03b829ab0728ba7622785bb5d3541496c45f"
         },
@@ -111,9 +111,6 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 
         DEBUG = True # boolean to specify whether or not print DEBUG information
         checkpoint_dir = self.volumes["simon_models_1"]+"/pretrained_models/"
-        print('-------------------')
-        print(checkpoint_dir)
-        print('-------------------')
         
         if 'statistical_classification' in self.hyperparams.keys() and self.hyperparams['statistical_classification']:
             execution_config = "Base.pkl"
