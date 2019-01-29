@@ -16,12 +16,12 @@ from d3m.primitive_interfaces.base import CallResult
 from d3m import container, utils
 from d3m.container import DataFrame as d3m_DataFrame, List as d3m_List
 from d3m.metadata import hyperparams, base as metadata_base
-from d3m.primitives.datasets import DatasetToDataFrame
 
-from common_primitives import utils as utils_cp
+from common_primitives import utils as utils_cp, dataset_to_dataframe as DatasetToDataFrame
 
 __author__ = 'Distil'
 __version__ = '1.2.1'
+__contact__ = 'mailto:jeffrey.gleason@newknowledge.io'
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -51,6 +51,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         'keywords': ['Data Type Predictor','Semantic Classification','Text','NLP','Tabular'],
         'source': {
             'name': __author__,
+            'contact': __contact__,
             'uris': [
                 # Unstructured URIs.
                 "https://github.com/NewKnowledge/simon-d3m-wrapper",
@@ -74,7 +75,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         },
         ],
         # The same path the primitive is registered with entry points in setup.py.
-        'python_path': 'd3m.primitives.distil.simon',
+        'python_path': 'd3m.primitives.data_cleaning.column_type_profiler.Simon',
         # Choose these from a controlled vocabulary in the schema. If anything is missing which would
         # best describe the primitive, make a merge request.
         'algorithm_types': [
@@ -285,11 +286,11 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                             
                 # add attribute / index / target metadata to annotations tuple
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
-                    annotations = annotations + 'https://metadata.datadrivendiscovery.org/types/PrimaryKey'
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
                 elif 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
-                    annotations = annotations + 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
                 else:
-                    annotations = annotations + 'https://metadata.datadrivendiscovery.org/types/Attribute'
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
 
                 col_dict['semantic_types'] = annotations
             inputs.metadata = inputs.metadata.update_column(i, col_dict)
@@ -298,7 +299,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 if __name__ == '__main__':  
     # LOAD DATA AND PREPROCESSING
     input_dataset = container.Dataset.load("file:///data/home/jgleason/D3m/datasets/seed_datasets_current/196_autoMpg/TRAIN/dataset_TRAIN/datasetDoc.json")
-    ds2df_client = DatasetToDataFrame(hyperparams={"dataframe_resource":"0"})
+    ds2df_client = DatasetToDataFrame.DatasetToDataFramePrimitive(hyperparams={"dataframe_resource":"0"})
     df = ds2df_client.produce(inputs = input_dataset)
 
     # SIMON client
