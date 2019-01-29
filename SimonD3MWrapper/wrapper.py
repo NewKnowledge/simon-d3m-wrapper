@@ -286,11 +286,11 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                             
                 # add attribute / index / target metadata to annotations tuple
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
-                    annotations = annotations + 'https://metadata.datadrivendiscovery.org/types/PrimaryKey'
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
                 elif 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
-                    annotations = annotations + 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget'
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
                 else:
-                    annotations = annotations + 'https://metadata.datadrivendiscovery.org/types/Attribute'
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
 
                 col_dict['semantic_types'] = annotations
             inputs.metadata = inputs.metadata.update_column(i, col_dict)
@@ -299,7 +299,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 if __name__ == '__main__':  
     # LOAD DATA AND PREPROCESSING
     input_dataset = container.Dataset.load("file:///data/home/jgleason/D3m/datasets/seed_datasets_current/196_autoMpg/TRAIN/dataset_TRAIN/datasetDoc.json")
-    ds2df_client = DatasetToDataFrame(hyperparams={"dataframe_resource":"0"})
+    ds2df_client = DatasetToDataFrame.DatasetToDataFramePrimitive(hyperparams={"dataframe_resource":"0"})
     df = ds2df_client.produce(inputs = input_dataset)
 
     # SIMON client
