@@ -117,7 +117,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         else:
             execution_config = "Base_stat_geo.pkl"
             category_list = "/Categories_base_stat_geo.txt"
-        with open(self.volumes["simon_models_1"]+ category_list,'r') as f:
+        with open(self.volumes["simon_models_1"]+ "/simon_models_1" + category_list,'r') as f:
             Categories = f.read().splitlines()
         
         # orient the user a bit
