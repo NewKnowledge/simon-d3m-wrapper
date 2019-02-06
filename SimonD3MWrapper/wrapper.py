@@ -239,6 +239,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 
         # overwrite or augment metadata with SIMON annotations
         with open('debug.txt', 'a') as f:
+            f.write('initial inputs')
             f.write(str(inputs.shape))
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
@@ -295,6 +296,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 col_dict['semantic_types'] = annotations
             inputs.metadata = inputs.metadata.update_column(i, col_dict)
             with open('debug.txt', 'a') as f:
+                f.write('final inputs')
                 f.write(str(inputs.shape))
         return CallResult(inputs)
 
