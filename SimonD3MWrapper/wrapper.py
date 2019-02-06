@@ -21,7 +21,7 @@ from common_primitives import utils as utils_cp, dataset_to_dataframe as Dataset
 
 __author__ = 'Distil'
 __version__ = '1.2.1'
-__contact__ = 'mailto:jeffrey.gleason@newknowledge.io'
+__contact__ = 'mailto:nklabs@newknowledge.com'
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -110,14 +110,14 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         p_threshold = 0.5
 
         DEBUG = True # boolean to specify whether or not print DEBUG information
-        checkpoint_dir = self.volumes["simon_models_1"]+"/pretrained_models/"
+        checkpoint_dir = self.volumes["simon_models_1"]+"/simon_models_1/pretrained_models/"
         if 'statistical_classification' in self.hyperparams.keys() and self.hyperparams['statistical_classification']:
             execution_config = "Base.pkl"
             category_list = "/Categories.txt"
         else:
             execution_config = "Base_stat_geo.pkl"
             category_list = "/Categories_base_stat_geo.txt"
-        with open(self.volumes["simon_models_1"] + category_list,'r') as f:
+        with open(self.volumes["simon_models_1"] + "/simon_models_1" + category_list,'r') as f:
             Categories = f.read().splitlines()
         
         # orient the user a bit
@@ -148,14 +148,13 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         y[np.all(frame.isnull(),axis=0)]=0
 
         result = encoder.reverse_label_encode(y,p_threshold)
-
         
         ## LABEL COMBINED DATA AS CATEGORICAL/ORDINAL
         category_count = 0
         ordinal_count = 0
         raw_data = frame.as_matrix()
         for i in np.arange(raw_data.shape[1]):
-            if 'statistical_classification' in self.hyperparams.keys() and self.hyperparams['statistical_classification']:
+            if self.hyperparams['statistical_classification']:
                 print("Beginning Guessing categorical/ordinal classifications...")
                 tmp = guess(raw_data[:,i], for_types ='category')
                 if tmp[0]=='category':
@@ -239,6 +238,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
             overwrite = False
 
         # overwrite or augment metadata with SIMON annotations
+        print(inputs.shape)
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
             col_dict = dict(metadata)
@@ -271,7 +271,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                                 'ordinal': ('https://metadata.datadrivendiscovery.org/types/OrdinalData',)}                    
             if overwrite or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
                 annotations = ()
-                if 'multi_label_classification' not in self.hyperparams.keys() or self.hyperparams['multi_label_classification']:         
+                if self.hyperparams['multi_label_classification']:         
                     for key in annotations_dict:
                         if key in ann:
                             annotations = annotations + annotations_dict[key]
@@ -293,6 +293,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
 
                 col_dict['semantic_types'] = annotations
             inputs.metadata = inputs.metadata.update_column(i, col_dict)
+            print(inputs.shape)
         return CallResult(inputs)
 
 if __name__ == '__main__':  
