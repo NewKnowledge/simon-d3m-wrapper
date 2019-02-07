@@ -234,10 +234,6 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         simon_annotations = self._produce_annotations(inputs = inputs)
 
         # overwrite or augment metadata with SIMON annotations
-        with open('debug.txt', 'a') as f:
-            f.write('initial metadata')
-            f.write(str(dict(inputs.metadata.query_column(2))))
-            f.write(str(inputs.shape))
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
             # semantic types
@@ -279,17 +275,29 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 # add attribute / index / target metadata to annotations tuple
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
-                elif 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
+                if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
-                else:
+                if 'https://metadata.datadrivendiscovery.org/types/Attribute':
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
+                if 'https://metadata.datadrivendiscovery.org/types/Target' in semantic_types:
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Target',)
+                if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in semantic_types:
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/TrueTarget',)
 
+                with open('debug.txt', 'w') as f:
+                    f.write('initial semantic types\n')
+                    f.write(str(col_dict['semantic_types']))
+                    f.write('\n')
+                    f.write(str(type(col_dict['semantic_types'])))
+                    f.write('\n')
                 col_dict['semantic_types'] = annotations
                 inputs.metadata = inputs.metadata.update_column(i, col_dict)
-        with open('debug.txt', 'a') as f:
-            f.write(str(inputs.shape))
-            f.write('final metadata')
-            f.write(str(dict(inputs.metadata.query_column(2))))
+                with open('debug.txt', 'a') as f:
+                    f.write('final semantic types\n')
+                    f.write(str(col_dict['semantic_types']))
+                    f.write('\n')
+                    f.write(str(type(col_dict['semantic_types'])))
+                    f.write('\n')
         return CallResult(inputs)
 
 if __name__ == '__main__':  
