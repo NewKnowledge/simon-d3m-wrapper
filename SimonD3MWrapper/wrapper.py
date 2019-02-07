@@ -277,27 +277,12 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
                 if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
-                if 'https://metadata.datadrivendiscovery.org/types/Attribute':
+                if 'https://metadata.datadrivendiscovery.org/types/Attribute' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
                 if 'https://metadata.datadrivendiscovery.org/types/Target' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Target',)
                 if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/TrueTarget',)
-
-                with open('debug.txt', 'w') as f:
-                    f.write('initial semantic types\n')
-                    f.write(str(col_dict['semantic_types']))
-                    f.write('\n')
-                    f.write(str(type(col_dict['semantic_types'])))
-                    f.write('\n')
-                col_dict['semantic_types'] = annotations
-                inputs.metadata = inputs.metadata.update_column(i, col_dict)
-                with open('debug.txt', 'a') as f:
-                    f.write('final semantic types\n')
-                    f.write(str(col_dict['semantic_types']))
-                    f.write('\n')
-                    f.write(str(type(col_dict['semantic_types'])))
-                    f.write('\n')
         return CallResult(inputs)
 
 if __name__ == '__main__':  
