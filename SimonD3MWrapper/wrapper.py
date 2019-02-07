@@ -239,12 +239,11 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
             f.write(str(dict(inputs.metadata.query_column(2))))
             f.write(str(inputs.shape))
         for i in range(0, inputs.shape[1]):
+            metadata = inputs.metadata.query_column(i)
+            # semantic types
+            semantic_types = metadata['semantic_types']
             if self.hyperparams['overwrite'] or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
-                metadata = inputs.metadata.query_column(i)
                 col_dict = dict(metadata)
-
-                # semantic types
-                semantic_types = metadata['semantic_types']
                 ann = simon_annotations['semantic types'][i]
                 annotations_dict = {'categorical': ('https://metadata.datadrivendiscovery.org/types/CategoricalData',), 
                                     'email': ('https://schema.org/email',),
@@ -286,7 +285,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
 
                 col_dict['semantic_types'] = annotations
-            inputs.metadata = inputs.metadata.update_column(i, col_dict)
+                inputs.metadata = inputs.metadata.update_column(i, col_dict)
         with open('debug.txt', 'a') as f:
             f.write(str(inputs.shape))
             f.write('final metadata')
