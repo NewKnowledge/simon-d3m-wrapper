@@ -21,7 +21,7 @@ from common_primitives import utils as utils_cp, dataset_to_dataframe as Dataset
 
 __author__ = 'Distil'
 __version__ = '1.2.1'
-__contact__ = 'mailto:jeffrey.gleason@newknowledge.io'
+__contact__ = 'mailto:nklabs@newknowledge.com'
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -117,7 +117,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         else:
             execution_config = "Base_stat_geo.pkl"
             category_list = "/Categories_base_stat_geo.txt"
-        with open(self.volumes["simon_models_1"]+ "/simon_models_1" + category_list,'r') as f:
+        with open(self.volumes["simon_models_1"] + "/simon_models_1" + category_list,'r') as f:
             Categories = f.read().splitlines()
         
         # orient the user a bit
@@ -148,14 +148,13 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         y[np.all(frame.isnull(),axis=0)]=0
 
         result = encoder.reverse_label_encode(y,p_threshold)
-
         
         ## LABEL COMBINED DATA AS CATEGORICAL/ORDINAL
         category_count = 0
         ordinal_count = 0
         raw_data = frame.as_matrix()
         for i in np.arange(raw_data.shape[1]):
-            if 'statistical_classification' in self.hyperparams.keys() and self.hyperparams['statistical_classification']:
+            if self.hyperparams['statistical_classification']:
                 print("Beginning Guessing categorical/ordinal classifications...")
                 tmp = guess(raw_data[:,i], for_types ='category')
                 if tmp[0]=='category':
@@ -233,45 +232,35 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         
         # calculate SIMON annotations
         simon_annotations = self._produce_annotations(inputs = inputs)
-        if 'overwrite' in self.hyperparams.keys():
-            overwrite = self.hyperparams['overwrite']
-        else:
-            overwrite = False
 
         # overwrite or augment metadata with SIMON annotations
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
-            col_dict = dict(metadata)
-            structural_type = metadata['structural_type']
-
-            # structural types
-            if overwrite or structural_type is "" or structural_type is None or 'structural_type' not in metadata.keys():
-                col_dict['structural_type'] = type("string")
-            
             # semantic types
             semantic_types = metadata['semantic_types']
-            ann = simon_annotations['semantic types'][i]
-            annotations_dict = {'categorical': ('https://metadata.datadrivendiscovery.org/types/CategoricalData',), 
-                                'email': ('https://schema.org/email',),
-                                'text': ('https://schema.org/Text',),
-                                'uri': ('https://metadata.datadrivendiscovery.org/types/FileName',),
-                                'address': ('https://schema.org/address',),
-                                'state': ('https://schema.org/State',),
-                                'city': ('https://schema.org/City',),
-                                'postal_code': ('https://schema.org/postalCode',),
-                                'latitude': ('https://schema.org/latitude',),
-                                'longitude': ('https://schema.org/longitude',),
-                                'country': ('https://schema.org/Country',),
-                                'country_code': ('https://schema.org/addressCountry',),
-                                'boolean': ('https://schema.org/Boolean',),
-                                'datetime': ('https://schema.org/DateTime',),
-                                'float': ('https://schema.org/Float',),
-                                'int': ('https://schema.org/Integer',),
-                                'phone': ('https://metadata.datadrivendiscovery.org/types/AmericanPhoneNumber',),
-                                'ordinal': ('https://metadata.datadrivendiscovery.org/types/OrdinalData',)}                    
-            if overwrite or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
+            if self.hyperparams['overwrite'] or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
+                col_dict = dict(metadata)
+                ann = simon_annotations['semantic types'][i]
+                annotations_dict = {'categorical': ('https://metadata.datadrivendiscovery.org/types/CategoricalData',), 
+                                    'email': ('https://schema.org/email',),
+                                    'text': ('https://schema.org/Text',),
+                                    'uri': ('https://metadata.datadrivendiscovery.org/types/FileName',),
+                                    'address': ('https://schema.org/address',),
+                                    'state': ('https://schema.org/State',),
+                                    'city': ('https://schema.org/City',),
+                                    'postal_code': ('https://schema.org/postalCode',),
+                                    'latitude': ('https://schema.org/latitude',),
+                                    'longitude': ('https://schema.org/longitude',),
+                                    'country': ('https://schema.org/Country',),
+                                    'country_code': ('https://schema.org/addressCountry',),
+                                    'boolean': ('https://schema.org/Boolean',),
+                                    'datetime': ('https://schema.org/DateTime',),
+                                    'float': ('https://schema.org/Float',),
+                                    'int': ('https://schema.org/Integer',),
+                                    'phone': ('https://metadata.datadrivendiscovery.org/types/AmericanPhoneNumber',),
+                                    'ordinal': ('https://metadata.datadrivendiscovery.org/types/OrdinalData',)}                    
                 annotations = ()
-                if 'multi_label_classification' not in self.hyperparams.keys() or self.hyperparams['multi_label_classification']:         
+                if self.hyperparams['multi_label_classification']:         
                     for key in annotations_dict:
                         if key in ann:
                             annotations = annotations + annotations_dict[key]
@@ -286,13 +275,14 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 # add attribute / index / target metadata to annotations tuple
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
-                elif 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
+                if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
-                else:
+                if 'https://metadata.datadrivendiscovery.org/types/Attribute' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
-
-                col_dict['semantic_types'] = annotations
-            inputs.metadata = inputs.metadata.update_column(i, col_dict)
+                if 'https://metadata.datadrivendiscovery.org/types/Target' in semantic_types:
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Target',)
+                if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in semantic_types:
+                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/TrueTarget',)
         return CallResult(inputs)
 
 if __name__ == '__main__':  
