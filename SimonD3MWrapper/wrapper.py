@@ -232,23 +232,15 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         
         # calculate SIMON annotations
         simon_annotations = self._produce_annotations(inputs = inputs)
-        if 'overwrite' in self.hyperparams.keys():
-            overwrite = self.hyperparams['overwrite']
-        else:
-            overwrite = False
 
         # overwrite or augment metadata with SIMON annotations
         with open('debug.txt', 'a') as f:
             f.write('initial metadata')
             f.write(str(dict(inputs.metadata.query_column(2))))
+            f.write(str(inputs.shape))
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
             col_dict = dict(metadata)
-            structural_type = metadata['structural_type']
-
-            # structural types
-            if overwrite or structural_type is "" or structural_type is None or 'structural_type' not in metadata.keys():
-                col_dict['structural_type'] = type("string")
             
             # semantic types
             semantic_types = metadata['semantic_types']
@@ -296,6 +288,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 col_dict['semantic_types'] = annotations
             inputs.metadata = inputs.metadata.update_column(i, col_dict)
         with open('debug.txt', 'a') as f:
+            f.write(str(inputs.shape))
             f.write('final metadata')
             f.write(str(dict(inputs.metadata.query_column(2))))
         return CallResult(inputs)
