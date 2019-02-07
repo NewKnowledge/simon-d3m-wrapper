@@ -239,31 +239,31 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
             f.write(str(dict(inputs.metadata.query_column(2))))
             f.write(str(inputs.shape))
         for i in range(0, inputs.shape[1]):
-            metadata = inputs.metadata.query_column(i)
-            col_dict = dict(metadata)
-            
-            # semantic types
-            semantic_types = metadata['semantic_types']
-            ann = simon_annotations['semantic types'][i]
-            annotations_dict = {'categorical': ('https://metadata.datadrivendiscovery.org/types/CategoricalData',), 
-                                'email': ('https://schema.org/email',),
-                                'text': ('https://schema.org/Text',),
-                                'uri': ('https://metadata.datadrivendiscovery.org/types/FileName',),
-                                'address': ('https://schema.org/address',),
-                                'state': ('https://schema.org/State',),
-                                'city': ('https://schema.org/City',),
-                                'postal_code': ('https://schema.org/postalCode',),
-                                'latitude': ('https://schema.org/latitude',),
-                                'longitude': ('https://schema.org/longitude',),
-                                'country': ('https://schema.org/Country',),
-                                'country_code': ('https://schema.org/addressCountry',),
-                                'boolean': ('https://schema.org/Boolean',),
-                                'datetime': ('https://schema.org/DateTime',),
-                                'float': ('https://schema.org/Float',),
-                                'int': ('https://schema.org/Integer',),
-                                'phone': ('https://metadata.datadrivendiscovery.org/types/AmericanPhoneNumber',),
-                                'ordinal': ('https://metadata.datadrivendiscovery.org/types/OrdinalData',)}                    
-            if overwrite or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
+            if self.hyperparams['overwrite'] or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
+                metadata = inputs.metadata.query_column(i)
+                col_dict = dict(metadata)
+
+                # semantic types
+                semantic_types = metadata['semantic_types']
+                ann = simon_annotations['semantic types'][i]
+                annotations_dict = {'categorical': ('https://metadata.datadrivendiscovery.org/types/CategoricalData',), 
+                                    'email': ('https://schema.org/email',),
+                                    'text': ('https://schema.org/Text',),
+                                    'uri': ('https://metadata.datadrivendiscovery.org/types/FileName',),
+                                    'address': ('https://schema.org/address',),
+                                    'state': ('https://schema.org/State',),
+                                    'city': ('https://schema.org/City',),
+                                    'postal_code': ('https://schema.org/postalCode',),
+                                    'latitude': ('https://schema.org/latitude',),
+                                    'longitude': ('https://schema.org/longitude',),
+                                    'country': ('https://schema.org/Country',),
+                                    'country_code': ('https://schema.org/addressCountry',),
+                                    'boolean': ('https://schema.org/Boolean',),
+                                    'datetime': ('https://schema.org/DateTime',),
+                                    'float': ('https://schema.org/Float',),
+                                    'int': ('https://schema.org/Integer',),
+                                    'phone': ('https://metadata.datadrivendiscovery.org/types/AmericanPhoneNumber',),
+                                    'ordinal': ('https://metadata.datadrivendiscovery.org/types/OrdinalData',)}                    
                 annotations = ()
                 if self.hyperparams['multi_label_classification']:         
                     for key in annotations_dict:
