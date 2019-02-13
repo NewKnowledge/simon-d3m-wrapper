@@ -273,8 +273,9 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                             break
                             
                 # add attribute / index / target metadata to annotations tuple
+                # special case: if the column is the d3mIndex must have two and only two semantic types: Integer and PrimaryKey
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
-                    annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
+                    annotations = annotations_dict['int'] + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
                 if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
                 if 'https://metadata.datadrivendiscovery.org/types/Attribute' in semantic_types:
