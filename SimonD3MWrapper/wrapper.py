@@ -283,6 +283,8 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Target',)
                 if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/TrueTarget',)
+                col_dict['semantic_types'] = annotations
+                inputs.metadata = inputs.metadata.update_column(i, col_dict)
         return CallResult(inputs)
 
 if __name__ == '__main__':  
