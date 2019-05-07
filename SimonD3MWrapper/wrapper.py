@@ -237,8 +237,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
             # semantic types
-            semantic_types = metadata['semantic_types']
-            if self.hyperparams['overwrite'] or semantic_types is "" or semantic_types is None or 'semantic_types' not in metadata.keys():
+            if self.hyperparams['overwrite'] or 'semantic_types' not in metadata.keys():
                 col_dict = dict(metadata)
                 ann = simon_annotations['semantic types'][i]
                 annotations_dict = {'categorical': ('https://metadata.datadrivendiscovery.org/types/CategoricalData',), 
@@ -273,6 +272,7 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                             break
                             
                 # add attribute / index / target metadata to annotations tuple
+                semantic_types = metadata['semantic_types'] if 'semantic_types' in metadata.keys() else ''
                 # special case: if the column is the d3mIndex must have two and only two semantic types: Integer and PrimaryKey
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
                     annotations = annotations_dict['int'] + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
