@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 import pandas
 import typing
-
+import sys
 from Simon import *
 from Simon.Encoder import *
 from Simon.DataGenerator import *
@@ -230,6 +230,10 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
             Input pandas frame with metadata augmented and optionally overwritten
         """
         
+        targets = inputs.metadata.get_columns_with_semantic_type('https://metadata.datadrivendiscovery.org/types/SuggestedTarget')[0]
+        print('metadata before overwrite\n', file = sys.__stdout__)
+        print(inputs.metadata.query_column(targets), file = sys.__stdout__)
+
         # calculate SIMON annotations
         simon_annotations = self._produce_annotations(inputs = inputs)
 
@@ -277,6 +281,14 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
                     annotations = annotations_dict['int'] + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
                 if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
+                    # remove Integer annotation from Target column - prevents issues with SKImputer
+                    print(annotations, file = sys.__stdout__)
+                    annotations = list(annotations)
+                    print(annotations, file = sys.__stdout__)
+                    if annotations_dict['int'][0] in annotations:
+                        annotations.remove(annotations_dict['int'][0])
+                    print(annotations, file = sys.__stdout__)
+                    annotations = tuple(annotations)
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
                 if 'https://metadata.datadrivendiscovery.org/types/Attribute' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
