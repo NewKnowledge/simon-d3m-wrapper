@@ -10,8 +10,7 @@ from Simon.LengthStandardizer import *
 
 from Simon.penny.guesser import guess
 
-from d3m.primitive_interfaces.transformer import TransformerPrimitiveBase
-from d3m.primitive_interfaces.base import CallResult
+from d3m.primitive_interfaces.base import CallResult, PrimitiveBase
 
 from d3m import container, utils
 from d3m.container import DataFrame as d3m_DataFrame, List as d3m_List
@@ -26,6 +25,9 @@ __contact__ = 'mailto:nklabs@newknowledge.com'
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
 
+class Params(params.Params):
+    pass
+
 class Hyperparams(hyperparams.Hyperparams):
     overwrite = hyperparams.UniformBool(default = False, semantic_types = [
         'https://metadata.datadrivendiscovery.org/types/ControlParameter'],
@@ -38,9 +40,13 @@ class Hyperparams(hyperparams.Hyperparams):
         description='whether to perfrom multi-label classification and append multiple annotations to metadata')
     pass
 
-class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
+class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-        Private method that produces primtive's best guess for structural type of each input column
+        The primitive infers the semantic type of each column from a LSTM-FCN neural network trained on 18
+        different semantic types. The primitive's annotations will overwrite the default annotations if 'overwrite' 
+        is set to True and will annotate columns with multiple annotations if multi_label_classification is set to 'True'.
+        Finally, a different mode of categorical and ordinal classification using rule-based heuristics can be activated if
+        'statistical_classification' is set to True. 
     """
     metadata = metadata_base.PrimitiveMetadata({
         # Simply an UUID generated once and fixed forever. Generated using "uuid.uuid4()".
@@ -88,6 +94,8 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         super().__init__(hyperparams=hyperparams, random_seed=random_seed, volumes=volumes)
 
         self.volumes = volumes
+        self.X_train = None
+        self.training_metadata_annotations = None
 
     def _produce_annotations(self, *, inputs: Inputs) -> Outputs:
         """
@@ -180,64 +188,15 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
         out_df.columns = ['semantic types','probabilities']
         return out_df
 
-    def produce_metafeatures(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
+    def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
         """
-        Produce primitive's best guess for the structural type of each input column.
-
-        Parameters
-        ----------
-        inputs : D3M Dataset object
-
-        Returns
-        -------
-        Outputs
-            The outputs is two lists of lists, each has length equal to number of columns in input pandas frame.
-            Each entry of the first one is a list of strings corresponding to each column's multi-label classification.
-            Each entry of the second one is a list of floats corresponding to prediction probabilities.
+        Learns column annotations using training data. Saves to apply to testing data. 
         """
-
-        out_df = self._produce_annotations(inputs = inputs)
-
-        # add metadata to output data frame
-        simon_df = d3m_DataFrame(out_df)
-        # first column ('semantic types')
-        col_dict = dict(simon_df.metadata.query((metadata_base.ALL_ELEMENTS, 0)))
-        col_dict['structural_type'] = type("this is text")
-        col_dict['name'] = 'semantic types'
-        col_dict['semantic_types'] = ('http://schema.org/Text', 'https://metadata.datadrivendiscovery.org/types/Attribute')
-        simon_df.metadata = simon_df.metadata.update((metadata_base.ALL_ELEMENTS, 0), col_dict)
-        # second column ('probabilities')
-        col_dict = dict(simon_df.metadata.query((metadata_base.ALL_ELEMENTS, 1)))
-        col_dict['structural_type'] = type("this is text")
-        col_dict['name'] = 'probabilities'
-        col_dict['semantic_types'] = ('http://schema.org/Text', 'https://metadata.datadrivendiscovery.org/types/Attribute')
-        simon_df.metadata = simon_df.metadata.update((metadata_base.ALL_ELEMENTS, 1), col_dict)
-        
-        return CallResult(simon_df)
-
-    def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Inputs]:
-        """
-        Add SIMON annotations if manual annotations do not exist. Hyperparameter overwrite controls whether manual 
-        annotations should be overwritten with SIMON annotations.
-
-        Parameters
-        ----------
-        inputs : Input pandas frame
-
-        Returns
-        -------
-        Outputs
-            Input pandas frame with metadata augmented and optionally overwritten
-        """
-        
-        targets = inputs.metadata.get_columns_with_semantic_type('https://metadata.datadrivendiscovery.org/types/SuggestedTarget')[0]
-        print('metadata before overwrite\n', file = sys.__stdout__)
-        print(inputs.metadata.query_column(targets), file = sys.__stdout__)
-
         # calculate SIMON annotations
-        simon_annotations = self._produce_annotations(inputs = inputs)
+        simon_annotations = self._produce_annotations(inputs = self.X_train)
 
         # overwrite or augment metadata with SIMON annotations
+        self.training_metadata_annotations = {}
         for i in range(0, inputs.shape[1]):
             metadata = inputs.metadata.query_column(i)
             # semantic types
@@ -281,14 +240,6 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 if 'https://metadata.datadrivendiscovery.org/types/PrimaryKey' in semantic_types:
                     annotations = annotations_dict['int'] + ('https://metadata.datadrivendiscovery.org/types/PrimaryKey',)
                 if 'https://metadata.datadrivendiscovery.org/types/SuggestedTarget' in semantic_types:
-                    # remove Integer annotation from Target column - prevents issues with SKImputer
-                    print(annotations, file = sys.__stdout__)
-                    annotations = list(annotations)
-                    print(annotations, file = sys.__stdout__)
-                    if annotations_dict['int'][0] in annotations:
-                        annotations.remove(annotations_dict['int'][0])
-                    print(annotations, file = sys.__stdout__)
-                    annotations = tuple(annotations)
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/SuggestedTarget',)
                 if 'https://metadata.datadrivendiscovery.org/types/Attribute' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/Attribute',)
@@ -297,7 +248,82 @@ class simon(TransformerPrimitiveBase[Inputs, Outputs, Hyperparams]):
                 if 'https://metadata.datadrivendiscovery.org/types/TrueTarget' in semantic_types:
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/TrueTarget',)
                 col_dict['semantic_types'] = annotations
-                inputs.metadata = inputs.metadata.update_column(i, col_dict)
+                self.training_metadata_annotations[i] = col_dict
+                #inputs.metadata = inputs.metadata.update_column(i, col_dict)
+        return CallResult(None)
+
+    def get_params(self) -> Params:
+        return self._params
+
+    def set_params(self, *, params: Params) -> None:
+        self.params = params
+
+    def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
+        """
+        Set primitive's training data
+
+        Parameters
+        ----------
+        inputs : Input pandas frame
+
+        Returns
+        -------
+        Outputs
+            None
+        """
+        self.X_train = inputs
+
+    def produce_metafeatures(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Outputs]:
+        """
+        Produce primitive's best guess for the structural type of each input column.
+
+        Parameters
+        ----------
+        inputs : D3M Dataframe object
+
+        Returns
+        -------
+        Outputs
+            The outputs is two lists of lists, each has length equal to number of columns in input pandas frame.
+            Each entry of the first one is a list of strings corresponding to each column's multi-label classification.
+            Each entry of the second one is a list of floats corresponding to prediction probabilities.
+        """
+
+        out_df = self._produce_annotations(inputs = inputs)
+
+        # add metadata to output data frame
+        simon_df = d3m_DataFrame(out_df)
+        # first column ('semantic types')
+        col_dict = dict(simon_df.metadata.query((metadata_base.ALL_ELEMENTS, 0)))
+        col_dict['structural_type'] = type("this is text")
+        col_dict['name'] = 'semantic types'
+        col_dict['semantic_types'] = ('http://schema.org/Text', 'https://metadata.datadrivendiscovery.org/types/Attribute')
+        simon_df.metadata = simon_df.metadata.update((metadata_base.ALL_ELEMENTS, 0), col_dict)
+        # second column ('probabilities')
+        col_dict = dict(simon_df.metadata.query((metadata_base.ALL_ELEMENTS, 1)))
+        col_dict['structural_type'] = type("this is text")
+        col_dict['name'] = 'probabilities'
+        col_dict['semantic_types'] = ('http://schema.org/Text', 'https://metadata.datadrivendiscovery.org/types/Attribute')
+        simon_df.metadata = simon_df.metadata.update((metadata_base.ALL_ELEMENTS, 1), col_dict)
+        
+        return CallResult(simon_df)
+
+    def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> CallResult[Inputs]:
+        """
+        Add SIMON annotations if manual annotations do not exist. Hyperparameter overwrite controls whether manual 
+        annotations should be overwritten with SIMON annotations.
+
+        Parameters
+        ----------
+        inputs : Input pandas frame
+
+        Returns
+        -------
+        Outputs
+            Input pandas frame with metadata augmented and optionally overwritten
+        """
+        for i in range(0, inputs.shape[1]):
+            inputs.metadata = inputs.metadata.update_column(i, self.training_metadata_annotations[i])
         return CallResult(inputs)
 
 if __name__ == '__main__':  
