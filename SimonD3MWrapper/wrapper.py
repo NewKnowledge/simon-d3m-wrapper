@@ -14,7 +14,7 @@ from d3m.primitive_interfaces.base import CallResult, PrimitiveBase
 
 from d3m import container, utils
 from d3m.container import DataFrame as d3m_DataFrame, List as d3m_List
-from d3m.metadata import hyperparams, base as metadata_base
+from d3m.metadata import hyperparams, base as metadata_base, params
 
 from common_primitives import utils as utils_cp, dataset_to_dataframe as DatasetToDataFrame
 
@@ -197,8 +197,8 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
 
         # overwrite or augment metadata with SIMON annotations
         self.training_metadata_annotations = {}
-        for i in range(0, inputs.shape[1]):
-            metadata = inputs.metadata.query_column(i)
+        for i in range(0, self.X_train.shape[1]):
+            metadata = self.X_train.metadata.query_column(i)
             # semantic types
             if self.hyperparams['overwrite'] or 'semantic_types' not in metadata.keys():
                 col_dict = dict(metadata)

@@ -9,16 +9,18 @@ git checkout simon_pipelines
 #git pull upstream master
 
 #Datasets=('185_baseball')
-Datasets=('LL0_acled_reduced')
-# '1491_one_hundred_plants_margin' 'LL0_1100_popularkids' 'LL1_336_MS_Geolife_transport_mode_prediction_separate_lat_lon')
-rm  /primitives/v2019.6.7/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.1/pipelines/test_pipeline/*
+Datasets=('LL0_acled_reduced' '1491_one_hundred_plants_margin' 'LL0_1100_popularkids' 'LL1_336_MS_Geolife_transport_mode_prediction_separate_lat_lon')
+FILES=/primitives/v2019.6.7/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.1/pipelines/test_pipeline/*.meta
+if test -f "$FILE"; then
+  rm  /primitives/v2019.6.7/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.1/pipelines/test_pipeline/*
+fi
 cd /primitives/v2019.6.7/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.1/pipelines
 #mkdir test_pipeline
 cd test_pipeline
 
 # create text file to record scores and timing information
-#touch scores.txt
-#echo "DATASET, F1 SCORE, EXECUTION TIME" >> scores.txt
+touch scores.txt
+echo "DATASET, F1 SCORE, EXECUTION TIME" >> scores.txt
 
 for i in "${Datasets[@]}"; do
 
@@ -34,12 +36,12 @@ for i in "${Datasets[@]}"; do
   # copy pipeline if execution time is less than one hour
   if [ $runtime -lt 3600 ]; then
      echo "$i took less than 1 hour, copying pipeline"
-     #cp * ../
+     cp * ../
   fi
 
   # save information
   IFS=, read col1 score col3 col4 < <(tail -n1 scores.csv)
-  #echo "$i, $score, $runtime" >> scores.txt
+  echo "$i, $score, $runtime" >> scores.txt
   
   # cleanup temporary file
   rm *.meta
