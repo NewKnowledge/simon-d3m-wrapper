@@ -10,6 +10,9 @@ from Simon.LengthStandardizer import *
 
 from Simon.penny.guesser import guess
 
+# import tensorflow.compat.v1 as tf
+# tf.disable_v2_behavior()
+
 from d3m.primitive_interfaces.base import CallResult, PrimitiveBase
 
 from d3m import container, utils
@@ -151,7 +154,10 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
         model_compile = lambda m: m.compile(loss='binary_crossentropy',
                 optimizer='adam', metrics=['binary_accuracy'])
         model_compile(model)
-        y = model.predict(X)   
+        import sys
+        print(X, file = sys.__stdout__)
+        print(X.shape, file = sys.__stdout__)
+        y = model.predict_on_batch(tf.constant(X))
         # discard empty column edge case
         y[np.all(frame.isnull(),axis=0)]=0
 
