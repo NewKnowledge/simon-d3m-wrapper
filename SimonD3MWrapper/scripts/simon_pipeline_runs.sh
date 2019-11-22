@@ -1,6 +1,6 @@
 #!/bin/bash -e 
 
-Datasets=('185_baseball' '1491_one_hundred_plants_margin' 'LL0_1100_popularkids' '38_sick' '4550_MiceProtein' '57_hypothyroid' 'LL0_acled_reduced')
+Datasets=('185_baseball' '1491_one_hundred_plants_margin' 'LL0_1100_popularkids' '57_hypothyroid' 'LL0_acled_reduced')
 cd /primitives/v2019.11.10/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.2
 cd pipelines
 python3 "/src/simond3mwrapper/SimonD3MWrapper/simon_pipeline.py"
