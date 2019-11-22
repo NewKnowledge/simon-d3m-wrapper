@@ -24,7 +24,7 @@ __version__ = '1.2.2'
 __contact__ = 'mailto:jeffrey.gleason@yonder.co'
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
