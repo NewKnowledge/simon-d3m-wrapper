@@ -1,12 +1,9 @@
 #!/bin/bash -e 
 
 Datasets=('185_baseball' '1491_one_hundred_plants_margin' 'LL0_1100_popularkids' '38_sick' '4550_MiceProtein' '57_hypothyroid' 'LL0_acled_reduced')
-cd /primitives
-git pull upstream master
-git branch simon_pipelines
-git checkout simon_pipelines
-cd /primitives/v2019.11.10/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.2/pipelines
+cd /primitives/v2019.11.10/Distil/d3m.primitives.data_cleaning.column_type_profiler.Simon/1.2.2
 mkdir pipelines
+cd pipelines
 python3 "/src/simond3mwrapper/SimonD3MWrapper/simon_pipeline.py"
 cd ..
 mkdir pipeline_runs
@@ -15,7 +12,7 @@ cd pipeline_runs
 for i in "${Datasets[@]}"; do
 
   # generate pipeline run
-  python3 -m d3m runtime -d /datasets/ fit-score -p ../pipelines/*.json -i /datasets/seed_datasets_current/$i/TRAIN/dataset_TRAIN/datasetDoc.json -t /datasets/seed_datasets_current/$i/TEST/dataset_TEST/datasetDoc.json -a /datasets/seed_datasets_current/$i/SCORE/dataset_SCORE/datasetDoc.json -r /datasets/seed_datasets_current/$i/${i}_problem/problemDoc.json -O $i.yml
+  python3 -m d3m runtime -v / -d /datasets/ fit-score -p ../pipelines/*.json -i /datasets/seed_datasets_current/$i/TRAIN/dataset_TRAIN/datasetDoc.json -t /datasets/seed_datasets_current/$i/TEST/dataset_TEST/datasetDoc.json -a /datasets/seed_datasets_current/$i/SCORE/dataset_SCORE/datasetDoc.json -r /datasets/seed_datasets_current/$i/${i}_problem/problemDoc.json -O $i.yml
 
 done
 
