@@ -1,6 +1,6 @@
-import os.path
+import os
 import numpy as np
-import pandas
+import pandas as pd
 import typing
 import sys
 from Simon import *
@@ -9,18 +9,22 @@ from Simon.DataGenerator import *
 from Simon.LengthStandardizer import *
 
 from Simon.penny.guesser import guess
-
-from d3m.primitive_interfaces.base import CallResult, PrimitiveBase
+from d3m.primitive_interfaces.supervised_learning import SupervisedLearnerPrimitiveBase
+from d3m.primitive_interfaces.base import CallResult
 
 from d3m import container, utils
 from d3m.container import DataFrame as d3m_DataFrame, List as d3m_List
 from d3m.metadata import hyperparams, base as metadata_base, params
 
-from common_primitives import utils as utils_cp, dataset_to_dataframe as DatasetToDataFrame
+import tensorflow as tf
+import logging
 
 __author__ = 'Distil'
-__version__ = '1.2.1'
-__contact__ = 'mailto:nklabs@newknowledge.com'
+__version__ = '1.2.2'
+__contact__ = 'mailto:jeffrey.gleason@yonder.co'
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -38,9 +42,29 @@ class Hyperparams(hyperparams.Hyperparams):
     multi_label_classification = hyperparams.UniformBool(default = True, semantic_types = [
         'https://metadata.datadrivendiscovery.org/types/TuningParameter'],
         description='whether to perfrom multi-label classification and append multiple annotations to metadata')
-    pass
+    max_rows = hyperparams.UniformInt(
+        lower = 100, 
+        upper = 2000, 
+        default = 500, 
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter'], 
+        description = 'maximum number of rows to consider when classifying data type of specific column')
+    max_chars = hyperparams.UniformInt(
+        lower = 1, 
+        upper = 100, 
+        default = 20, 
+        upper_inclusive=True,
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter'], 
+        description = 'maximum number of characters to consider when processing row')
+    p_threshold = hyperparams.Uniform(
+        lower = 0, 
+        upper = 1.0, 
+        default = 0.5, 
+        upper_inclusive = True,
+        semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter'], 
+        description = """probability threshold to use when decoding classification results. 
+            Predictions above p_threshold will be returned""")
 
-class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
+class simon(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
         The primitive infers the semantic type of each column from a LSTM-FCN neural network trained on 18
         different semantic types. The primitive's annotations will overwrite the default annotations if 'overwrite' 
@@ -101,25 +125,19 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
         """
         Parameters
         ----------
-        inputs: Input pandas frame
+        inputs: Input pd frame
 
         Returns
         -------
         Outputs
-            The outputs is two lists of lists, each has length equal to number of columns in input pandas frame.
+            The outputs is two lists of lists, each has length equal to number of columns in input pd frame.
             Each entry of the first one is a list of strings corresponding to each column's multi-label classification.
             Each entry of the second one is a list of floats corresponding to prediction probabilities.
         """
-        frame = inputs
 
-        # setup model as you typically would in a Simon main file
-        maxlen = 20
-        max_cells = 500
-        p_threshold = 0.5
-
-        DEBUG = True # boolean to specify whether or not print DEBUG information
+        frame = inputs.copy()
         checkpoint_dir = self.volumes["simon_models_1"]+"/simon_models_1/pretrained_models/"
-        if 'statistical_classification' in self.hyperparams.keys() and self.hyperparams['statistical_classification']:
+        if self.hyperparams['statistical_classification']:
             execution_config = "Base.pkl"
             category_list = "/Categories.txt"
         else:
@@ -129,15 +147,15 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
             Categories = f.read().splitlines()
         
         # orient the user a bit
-        print("fixed categories are: ")
+        logger.debug("fixed categories are: ")
         Categories = sorted(Categories)
-        print(Categories)
+        logger.debug(Categories)
         category_count = len(Categories)
 
         # load specified execution configuration
         if execution_config is None:
-            raise TypeError
-        Classifier = Simon(encoder={}) # dummy text classifier
+            raise TypeError("No model config")
+        Classifier = Simon(encoder={}) 
         config = Classifier.load_config(execution_config, checkpoint_dir)
         encoder = config['encoder']
         checkpoint = config['checkpoint']
@@ -145,25 +163,29 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
         X = encoder.encodeDataFrame(frame)
 
         # build classifier model
-        model = Classifier.generate_model(maxlen, max_cells, category_count)
+        model = Classifier.generate_model(self.hyperparams['max_chars'], 
+            self.hyperparams['max_rows'], 
+            category_count)
         Classifier.load_weights(checkpoint, None, model, checkpoint_dir)
 
         model_compile = lambda m: m.compile(loss='binary_crossentropy',
                 optimizer='adam', metrics=['binary_accuracy'])
         model_compile(model)
-        y = model.predict(X)   
-        # discard empty column edge case
-        y[np.all(frame.isnull(),axis=0)]=0
 
-        result = encoder.reverse_label_encode(y,p_threshold)
+        y = model.predict_on_batch(tf.constant(X))
+
+        # discard empty column edge case
+        #y[np.all(frame.isnull(),axis=0)]=0
+
+        result = encoder.reverse_label_encode(y,self.hyperparams['p_threshold'])
         
         ## LABEL COMBINED DATA AS CATEGORICAL/ORDINAL
         category_count = 0
         ordinal_count = 0
-        raw_data = frame.as_matrix()
+        raw_data = frame.values
         for i in np.arange(raw_data.shape[1]):
             if self.hyperparams['statistical_classification']:
-                print("Beginning Guessing categorical/ordinal classifications...")
+                logger.info("Beginning Guessing categorical/ordinal classifications...")
                 tmp = guess(raw_data[:,i], for_types ='category')
                 if tmp[0]=='category':
                     category_count += 1
@@ -178,13 +200,13 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
                             tmp2.append('ordinal')
                             result[0][i] = tmp2
                             result[1][i].append(1)
-                print("Done with statistical variable guessing")
+                logger.info("Done with statistical variable guessing")
                 ## FINISHED LABELING COMBINED DATA AS CATEGORICAL/ORDINAL
             result[0][i] = d3m_List(result[0][i])
             result[1][i] = d3m_List(result[1][i])
         Classifier.clear_session()
 
-        out_df = pandas.DataFrame.from_records(list(result)).T
+        out_df = pd.DataFrame.from_records(list(result)).T
         out_df.columns = ['semantic types','probabilities']
         return out_df
 
@@ -249,7 +271,7 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
                     annotations = annotations + ('https://metadata.datadrivendiscovery.org/types/TrueTarget',)
                 col_dict['semantic_types'] = annotations
                 self.training_metadata_annotations[i] = col_dict
-                #inputs.metadata = inputs.metadata.update_column(i, col_dict)
+        
         return CallResult(None)
 
     def get_params(self) -> Params:
@@ -264,7 +286,7 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
 
         Parameters
         ----------
-        inputs : Input pandas frame
+        inputs : Input pd frame
 
         Returns
         -------
@@ -284,7 +306,7 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
         Returns
         -------
         Outputs
-            The outputs is two lists of lists, each has length equal to number of columns in input pandas frame.
+            The outputs is two lists of lists, each has length equal to number of columns in input pd frame.
             Each entry of the first one is a list of strings corresponding to each column's multi-label classification.
             Each entry of the second one is a list of floats corresponding to prediction probabilities.
         """
@@ -315,34 +337,14 @@ class simon(PrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
 
         Parameters
         ----------
-        inputs : Input pandas frame
+        inputs : Input pd frame
 
         Returns
         -------
         Outputs
-            Input pandas frame with metadata augmented and optionally overwritten
+            Input pd frame with metadata augmented and optionally overwritten
         """
-        for i in range(0, inputs.shape[1]):
-            inputs.metadata = inputs.metadata.update_column(i, self.training_metadata_annotations[i])
+        if len(self.training_metadata_annotations) != 0:
+            for i in range(0, inputs.shape[1]):
+                inputs.metadata = inputs.metadata.update_column(i, self.training_metadata_annotations[i])
         return CallResult(inputs)
-
-if __name__ == '__main__':  
-    # LOAD DATA AND PREPROCESSING
-    input_dataset = container.Dataset.load("file:///data/home/jgleason/D3m/datasets/seed_datasets_current/196_autoMpg/TRAIN/dataset_TRAIN/datasetDoc.json")
-    ds2df_client = DatasetToDataFrame.DatasetToDataFramePrimitive(hyperparams={"dataframe_resource":"0"})
-    df = ds2df_client.produce(inputs = input_dataset)
-
-    # SIMON client
-    # try with no hyperparameter
-    volumes = {} # d3m large primitive architecture dictionary of large files
-    volumes['simon_models_1'] = '/data/home/jgleason/Downloads/simon_models_1'
-    simon_client = simon(hyperparams={'overwrite':True, 'statistical_classification':False, \
-        'multi_label_classification':True}, volumes = volumes)
-
-    # produce method
-    result = simon_client.produce(inputs = df.value)
-    print(result.value.metadata.query_column(0))
-
-    # produce_metafeatures method
-    features = simon_client.produce_metafeatures(inputs = df.value)
-    print(features.value)
