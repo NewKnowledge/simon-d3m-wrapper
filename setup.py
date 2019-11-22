@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(name='SimonD3MWrapper',
     version='1.2.1',
-    description='A thin client for interacting with dockerized simon primitive',
+    description='A thin client for interacting with simon data type classifier',
     packages=['SimonD3MWrapper'],
     install_requires=["numpy==1.15.4",
         "pandas==0.23.4",
