@@ -27,7 +27,7 @@ __version__ = "1.2.2"
 __contact__ = "mailto:jeffrey.gleason@yonder.co"
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -270,16 +270,16 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
                 guess(raw_data[:, i], for_types="category")
                 for i in np.arange(raw_data.shape[1])
             ]
-            for g in guesses:
+            for i, g in enumerate(guesses):
                 if g[0] == "category":
-                    decoded_preds[0][i].append("categorical")
+                    decoded_preds[0][i] += ("categorical",)
                     decoded_preds[1][i].append(1)
                     if (
                         ("int" in decoded_preds[1][i])
                         or ("float" in decoded_preds[1][i])
                         or ("datetime" in decoded_preds[1][i])
                     ):
-                        decoded_preds[0][i].append("ordinal")
+                        decoded_preds[0][i] += ("ordinal",)
                         decoded_preds[1][i].append(1)
             logger.debug("Done with statistical variable guessing")
 
