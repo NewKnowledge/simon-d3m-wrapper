@@ -27,7 +27,7 @@ __version__ = "1.2.2"
 __contact__ = "mailto:jeffrey.gleason@yonder.co"
 
 logger = logging.getLogger(__name__)
-#logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 Inputs = container.pandas.DataFrame
 Outputs = container.pandas.DataFrame
@@ -128,17 +128,17 @@ class Hyperparams(hyperparams.Hyperparams):
 
 
 class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
-    """ The primitive uses a LSTM-FCN neural network trained on 18 different semantic types to infer the semantic 
-        type of each column. The primitive's annotations will overwrite the default annotations if 'overwrite' 
-        is set to True (column roles, e.g. Attribute, PrimaryKey, Target from original annotations will be kept). 
+    """ The primitive uses a LSTM-FCN neural network trained on 18 different semantic types to infer the semantic
+        type of each column. The primitive's annotations will overwrite the default annotations if 'overwrite'
+        is set to True (column roles, e.g. Attribute, PrimaryKey, Target from original annotations will be kept).
         Otherwise the primitive will augment the existing annotations with its predicted labels.
         The primitive will append multiple annotations if multi_label_classification is set to 'True'.
         Finally, a different mode of typing inference that uses rule-based heuristics will be used  if
-        'statistical_classification' is set to True. 
-    
+        'statistical_classification' is set to True.
+
         Arguments:
             hyperparams {Hyperparams} -- D3M Hyperparameter object
-        
+
         Keyword Arguments:
             random_seed {int} -- random seed (default: {0})
             volumes {Dict[str, str]} -- large file dictionary containing model weights (default: {None})
@@ -212,18 +212,18 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         self.params = None
 
     def _produce_annotations(self, *, inputs: Inputs) -> Outputs:
-        """ generates dataframe with semantic type classifications and classification probabilities 
+        """ generates dataframe with semantic type classifications and classification probabilities
             for each column of original dataframe
-        
+
         Arguments:
             inputs {Inputs} -- D3M dataframe
-        
+
         Returns:
             Outputs -- dataframe with two columns: "semantic type classifications" and "probabilities"
-                       Each row represents a column in the original dataframe. The column "semantic type 
+                       Each row represents a column in the original dataframe. The column "semantic type
                        classifications" contains a list of all semantic type labels and the column
-                       "probabilities" contains a list of the model's confidence in assigning each 
-                       respective semantic type label 
+                       "probabilities" contains a list of the model's confidence in assigning each
+                       respective semantic type label
         """
 
         # load model checkpoint
@@ -291,12 +291,12 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         return out_df
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> CallResult[None]:
-        """ Learns column annotations using training data. Saves to apply to testing data. 
-            
+        """ Learns column annotations using training data. Saves to apply to testing data.
+
             Keyword Arguments:
                 timeout {float} -- timeout, not considered (default: {None})
                 iterations {int} -- iterations, not considered (default: {None})
-            
+
             Returns:
                 CallResult[None]
         """
@@ -353,9 +353,9 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
 
     def set_training_data(self, *, inputs: Inputs) -> None:
         """ Sets primitive's training data
-        
+
             Arguments:
-                inputs {Inputs} -- D3M dataframe 
+                inputs {Inputs} -- D3M dataframe
         """
         self.X_train = inputs
 
@@ -366,20 +366,20 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
 
             Arguments:
                 inputs {Inputs} -- full D3M dataframe, containing attributes, key, and target
-            
+
             Keyword Arguments:
                 timeout {float} -- timeout, not considered (default: {None})
                 iterations {int} -- iterations, not considered (default: {None})
 
             Raises:
                 PrimitiveNotFittedError: if primitive not fit
-            
+
             Returns:
                 CallResult[Outputs] -- dataframe with two columns: "semantic type classifications" and "probabilities"
-                    Each row represents a column in the original dataframe. The column "semantic type 
+                    Each row represents a column in the original dataframe. The column "semantic type
                     classifications" contains a list of all semantic type labels and the column
-                    "probabilities" contains a list of the model's confidence in assigning each 
-                    respective semantic type label  
+                    "probabilities" contains a list of the model's confidence in assigning each
+                    respective semantic type label
         """
 
         if not self._is_fit:
@@ -417,12 +417,12 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
     def produce(
         self, *, inputs: Inputs, timeout: float = None, iterations: int = None
     ) -> CallResult[Inputs]:
-        """ Add SIMON annotations if manual annotations do not exist. Hyperparameter overwrite controls 
+        """ Add SIMON annotations if manual annotations do not exist. Hyperparameter overwrite controls
             whether SIMON annotations should overwrite manual annotations or merely augment them
 
             Arguments:
                 inputs {Inputs} -- full D3M dataframe, containing attributes, key, and target
-            
+
             Keyword Arguments:
                 timeout {float} -- timeout, not considered (default: {None})
                 iterations {int} -- iterations, not considered (default: {None})
@@ -437,10 +437,32 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         if not self._is_fit:
             raise PrimitiveNotFittedError("Primitive not fitted.")
 
-        # update columns with new metadata annotaions
-        for i in range(0, inputs.shape[1]):
-            inputs.metadata = inputs.metadata.update_column(
-                i, self.training_metadata_annotations[i]
-            )
-        return CallResult(inputs, has_finished=self._is_fit)
+        if len(self.training_metadata_annotations) != 0:
+            for i in range(0, inputs.shape[1]):
+                if (
+                    len(
+                        {
+                            "https://metadata.datadrivendiscovery.org/types/Target",
+                            "https://metadata.datadrivendiscovery.org/types/TrueTarget",
+                            "https://metadata.datadrivendiscovery.org/types/PrimaryKey",
+                            "https://metadata.datadrivendiscovery.org/types/Attribute",
+                        }
+                        & set(self.training_metadata_annotations[i]["semantic_types"])
+                    )
+                    == 0
+                ):
+                    self.training_metadata_annotations[i][
+                        "semantic_types"
+                    ] = self.training_metadata_annotations[i]["semantic_types"] + (
+                        "https://metadata.datadrivendiscovery.org/types/Attribute",
+                    )
 
+                inputs.metadata = inputs.metadata.update_column(
+                    i, self.training_metadata_annotations[i]
+                )
+        inputs.metadata = inputs.metadata.update(
+            (metadata_base.ALL_ELEMENTS,),
+            {"dimension": {"length": len(self.training_metadata_annotations),},},
+        )
+
+        return CallResult(inputs, has_finished=self._is_fit)
