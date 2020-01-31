@@ -1,24 +1,30 @@
 # Simon D3M Wrapper
-Wrapper of the Simon semantic classifier into D3M infrastructure. All code is written in Python 3.5 and must be run in 3.5 or greater. 
+Wrapper of the Simon semantic classifier into D3M infrastructure.  
+
+Simon uses a LSTM-FCN neural network trained on 18 different semantic types to infer the semantic
+type of each column. A hyperparameter **return_result** controls whether Simon's inferences replace existing metadata, append new columns with inferred metadata, or return a new dataframe with only the inferred columns. 
+
+Simon can append multiple annotations if the hyperparameter **multi_label_classification** is set to 'True'. If **statistical_classification** is set to True, Simon will use rule-based heuristics to label categorical and ordinal columns. Finally, the **p_threshold** hyperparameter varies the prediction probability threshold for adding annotations. 
+
+The following annotations will only be considered if **statistical_classification** is set to False:
+    "https://metadata.datadrivendiscovery.org/types/AmericanPhoneNumber"
+    "http://schema.org/addressCountry"
+    "http://schema.org/Country"
+    "http://schema.org/longitude" 
+    "http://schema.org/latitude"
+    "http://schema.org/postalCode" 
+    "http://schema.org/City"
+    "http://schema.org/State" 
+    "http://schema.org/address" 
+    "http://schema.org/email" 
+    "https://metadata.datadrivendiscovery.org/types/FileName"
+
+The following annotations will only be considered if **statistical_classification** is set to True:
+    "https://metadata.datadrivendiscovery.org/types/OrdinalData"
 
 The base library for SIMON can be found here: https://github.com/NewKnowledge/simon
 
 ## Install
 
-pip3 install -e git+https://github.com/NewKnowledge/simon-d3m-wrapper.git#egg=SimonD3MWrapper --process-dependency-links
+pip install -e git+https://github.com/NewKnowledge/simon-d3m-wrapper.git#egg=SimonD3MWrapper 
 
-## Output
-The output should be a list of two list of lists. 
-
-The first is a list of multilabel label strings (ordered the same as columns).
-
-e.g. if all (except the last-but-one, an 'int') labels are text (remember that the order of labels matches the order in the source file), the output should be as follows:
-
-```[['text'], ['text'], ['int'], ['text']]```
-
-The second is a list of lists of floats (of the same size), providing corresponding confidence probabilities for each label.
-
-## Available Functions
-
-#### produce
-Produce primitive's best guess for the structural type of each input column. The input is a pandas dataframe. The output is  a list that has length equal to number of columns in input pandas frame. Each entry is a list of strings corresponding to each column's multi-label classification. Could be empty, signifiying lack of confidence in any classification.
