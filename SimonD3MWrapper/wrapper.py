@@ -139,6 +139,14 @@ class Hyperparams(hyperparams.Hyperparams):
         semantic_types=['https://metadata.datadrivendiscovery.org/types/ControlParameter'],
         description="Replace primary index columns even if otherwise appending columns. Applicable only if \"return_result\" is set to \"append\".",
     )
+    overwrite = hyperparams.UniformBool(
+        default=False,
+        semantic_types=[
+            "https://metadata.datadrivendiscovery.org/types/ControlParameter"
+        ],
+        description="whether to overwrite manual annotations with SIMON annotations. If overwrite is set to False" +
+            "only columns with `UnknownType` will be processed, otherwise all columns will be processed",
+    )
     statistical_classification = hyperparams.UniformBool(
         default=True,
         semantic_types=[
@@ -480,9 +488,6 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
 
     def _can_use_column(self, inputs_metadata: metadata_base.DataMetadata, column_index: int) -> bool:
         """ originally from from d3m.primitives.schema_discovery.profiler.Common """
-        
-        # TODO do we detect on all columns or only columns w/ Unkown type
-        # TODO what about priveleged columns - Target, Keys (Primary + Grouping)
 
         column_metadata = inputs_metadata.query_column(column_index)
 
@@ -502,6 +507,10 @@ class simon(UnsupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         """ originally from from d3m.primitives.schema_discovery.profiler.Common """
 
         def can_use_column(column_index: int) -> bool:
+            # if overwrite, we detect on all columns
+            if self.hyperparams['overwrite']:
+                return True
+
             return self._can_use_column(inputs_metadata, column_index)
 
         columns_to_use, columns_not_to_use = base_utils.get_columns_to_use(inputs_metadata, self.hyperparams['use_columns'], self.hyperparams['exclude_columns'], can_use_column)
